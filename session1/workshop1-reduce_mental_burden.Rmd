@@ -45,8 +45,9 @@ library(skimr)
 library(nycdogs)
 library(sf) # for geospatial visualisation
 
-loadfonts(device="win")
-# loadfonts(device="pdf") if you have a mac
+#loadfonts(device="win")
+
+loadfonts(device="pdf") #if you have a mac
 
 ```
 
@@ -65,9 +66,15 @@ loadfonts(device="win")
 url <- "https://github.com/rfordatascience/tidytuesday/raw/master/data/2019/2019-08-13/emperors.csv"
 emperors <- vroom(url)
 
+#glimpse(emperors)
+#skimr::skim(emperors)
 
 emperor_killers <- emperors %>%
-  count(killer) 
+  count(killer)  %>% 
+  arrange(n)
+#arrange, mutate
+
+emperor_killers
 
 #if you want to use hex codes, gplots::col2hex("colour name") will give you hex code
 # grey70 = #B3B3B3, tomato = #FF6347
@@ -82,26 +89,32 @@ my_colours <- c("grey70", "tomato")
 
 emperor_killers %>% 
   mutate(
-    ___________ = ifelse(killer == "___________", TRUE, FALSE),
+    killer_type = ifelse(killer == "Praetorian Guard" | killer == "Own Army" , TRUE, FALSE),
     # use `fct_inorder()` to maintain the way we sorted the data
     killer = fct_inorder(killer)
   ) %>%
-  ggplot(aes(x = n, y = killer, fill = ___________)) +
+  ggplot(aes(x = n, y = killer, fill = killer_type)) +
   geom_col() +
-  scale_fill_manual(values = my_colours)+
+  scale_fill_manual(values = my_colours) +
   geom_text(
     aes(label = n, x = n - .25), 
     color = "white", 
     size = 5,
     hjust = 1
   ) +
-  theme_minimal() +
-  theme(
-    axis.title.y = element_blank(), 
-    legend.position = "none" 
-  ) +
-  ___________(values = ___________) +
-  xlab("number of emperors")
+    theme(
+    plot.title.position = "plot",
+    plot.title = element_textbox_simple(size=16),
+    axis.title.y = element_text(angle = 0, vjust = 0.5,size=14),
+    axis.text = element_text(size=12),
+    legend.position = "none") +
+  labs(colour = "killer_type",
+       title = "<b>categories of Roman emperor killers</b><br>
+       <span style = 'font-size:12pt'>Many emperors were murdered by their <span style='color:#FF6347'>own trusted soldiers</span>.</span>",
+       x= "Number of deaths",
+       y = "")
+  #___________(values = ___________) +
+  #xlab("number of emperors")
 ```
 
 

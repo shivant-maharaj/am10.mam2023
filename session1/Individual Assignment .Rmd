@@ -1,0 +1,307 @@
+---
+title: "Problem_Set_1_Shivant"
+author: "Shivant Maharaj"
+date: "2022-11-07"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    number_sections: true
+    toc: yes
+    toc_float: yes
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, setup, include = FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=6.75,
+  fig.align = "center"
+)
+```
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(extrafont)
+library(vroom)
+library(ggtext)
+library(gapminder)
+library(ggrepel)
+library(patchwork)
+library(gghighlight)
+library(skimr)
+library(remotes)
+install_github("kjhealy/nycdogs")
+library(nycdogs)
+library(sf) # for geospatial visualisation
+library(vroom)
+library(janitor)
+library(lubridate)
+loadfonts(device="pdf")
+```
+
+# Question 1
+
+## Text
+
+Heading - 1/2 - Assuming that the header starts with 'Figure 10'. It is
+not very prominent and is hard to associate it with the
+
+Subtitle - 2/2 - There are markups on the graph as well as as an
+informative subtitle. Not left aligned.
+
+Horizontal Text - 2/2 - All text is horizonal in the visualisation
+
+Data Labels - 1/2 - Missing y axis label
+
+Labels used sparingly - 1/2 - I think it is used a bit too sparingly -
+we are also missing the legend title
+
+## Arrangements
+
+Proportions are accurate - 2/2 - The proportions match the content that
+the visual is trying to portray. It has both the minimum and maximum
+values for the y axis.
+
+Data are intentionally ordered - 1/2 - Majority of the data displayed is
+ordered but the legend des not follow an alphabetical order.
+
+Axis intervals are equidistant - 2/2 - Data is consistently ordered and
+2D.
+
+Two dimensional - 2/2
+
+Free from decorations - 2/2 - Free from unnecessary icons
+
+##Colour
+
+Color scheme is intentional - 1/2 - The colour palatte is not very
+intentional and follows the blue, turquoise and green colours.
+
+Color is used to highlight key patterns - 0/2 - Colour is not used to
+highlight any findings
+
+Color is legible when printed in black and white - 0/2 - Will be very
+hard to see the differences in blac and white
+
+Color is legible for people with colorblindness - 1/2 - The color is
+legible for color blind individuals, but hard to distinguish
+
+Text sufficiently contrasts background - 2/2 - High contrast is good
+
+## Lines
+
+Gridlines, if present, are muted - 2/2 - Muted and required since the
+graph has no numeric points/anotations on it
+
+Graph does not have border line - 2/2 - No border line
+
+Axes do not have unnecessary tick marks or axis lines - 2/2 - No
+unnecessary lines
+
+Graph has one horizontal and one vertical axis Viewers can best
+interpret one x- and one y-axis. - 2/2 - Only 1 axis
+
+## Overall
+
+Graph highlights significant finding or conclusion - 1/2 - We can see a
+steep decline after the annotated emergency
+
+The type of graph is appropriate for data - 2/2 - Yes, the line graph
+helps show how the different industries were affected by the emergency
+
+Graph has appropriate level of precision - 2/2 - Precision level is
+suitable for the target audience
+
+Individual chart elements work together to reinforce the overarching
+takeaway message - 2/2 - Yes, the graph shows that there is a consistent
+drop in credit card spending in all industries once the national
+emergency was announced.
+
+## Score
+
+35 / 48 = 73%
+
+# Question 2
+
+```{r q2}
+
+ggplot(cars, aes(x = dist, y = speed, fill = speed)) + 
+  geom_col() +
+  labs(title = "<b>Fast cars go vroom vroom</b><br>
+      <span style = 'font-size:16pt'>This graph is showing us speed and distance.</span>.</span>",
+      x= "dist",
+      y = "speed") +
+      theme( 
+      panel.background = element_rect(fill = "#F1E8E2"),
+      plot.title.position = "plot",
+      plot.title = element_textbox_simple(size=12),
+      axis.title = element_text(angle = 90, vjust = 0.5,size=10),
+      axis.text.x = element_text( angle = 90, vjust = 0.5,size=10),
+      legend.position = "bottom", panel.border = element_rect(color = "hotpink",
+                                    fill = NA,
+                                    size = 10)) +
+      theme(panel.grid.major=element_line(colour="red")) 
+
+```
+
+
+# Question 3
+
+The Stop and Search data supplied by the UK Police website was
+downloaded and imported into R. Basic data cleaning was performed on the
+dataset.
+
+We also glimpsed the data to have an overview of the data within the
+table.
+
+```{r read}
+
+data <- vroom("stop-and-search.csv") %>% clean_names()
+
+data <- data %>% mutate(date = date(date))
+
+#skimr::skim(data)
+
+head(data, 50)
+```
+
+## Plot 1
+
+The following plot shows the frequency of the various search and stop
+reasons.
+
+```{r q3 p1}
+
+data_q1 <- data %>% 
+  group_by(type, date) %>% 
+  summarise(count = n()) 
+
+#data_q1
+
+ggplot(data_q1, aes(x = date, y = count, colour = type)) + 
+  geom_line(size = 2) +
+  labs(title = "<b>Person Search is the leading type of search conducted</b><br>
+      <span style = 'font-size:12pt'>Line graph showing the frequency of stop and search reports</span>.</span>",
+      x= "Date",
+      y = "Number of Reports",
+      caption = "Source: Search and Stop dataset available at https://data.police.uk/data/") +
+      theme( 
+      panel.background = element_rect(fill = "#F3F3F3"),
+      plot.title.position = "plot",
+      plot.title = element_textbox_simple(size=14),
+      axis.title = element_text(angle = 0, vjust = 0.5,size=10),
+      axis.text = element_text( angle = 0, vjust = 0.5,size=8),
+      legend.position = "bottom") 
+  
+
+
+```
+
+## Plot 2
+
+Tje following plot shows the distribution of search and stop occurences
+per day of the week. I believe this shows a trend that increases the
+closer it gets to the weekend. This could be due to the reason that
+there is more activity as the week progresses.
+
+```{r q3 p2}
+
+q2_c <- c("#0fa3b1", "#454b66", "#ed6a5a")
+
+q2 <- data %>% 
+  mutate(day = wday(date)) %>% 
+  mutate(day_text = case_when(day == 1 ~ "Monday", 
+                              day == 2 ~ "Tuesday",
+                              day == 3 ~ "Wednesday",
+                              day == 4 ~ "Thursday",
+                              day == 5 ~ "Friday",
+                              day == 6 ~ "Saturday",
+                              day == 7 ~ "Sunday")) %>% 
+  group_by(day_text, type) %>% 
+  summarise(count = n()) %>% 
+  mutate(day_text=factor(day_text, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>% 
+  arrange(day_text)
+
+ggplot(q2, aes(x = day_text, y = count, fill = type)) + 
+  geom_col() +
+  scale_fill_manual(values = q2_c) +
+  scale_x_discrete(guide = guide_axis(n.dodge=2)) +
+  labs(title = "<b>More people are stopped and searched on a Friday</b><br>
+      <span style = 'font-size:12pt'>Bar graph showing the frequency of stop and search reports per day of the week</span>.</span>",
+      x= "Day of the Week",
+      y = "Count",
+      caption = "Source: Search and Stop dataset available at https://data.police.uk/data/") +
+      theme( 
+      plot.title.position = "plot",
+      plot.title = element_textbox_simple(size=14),
+      axis.title = element_text(angle = 0, vjust = 0.5,size=10),
+      axis.text = element_text( angle = 0, vjust = 0.5,size=8),
+      legend.position = "right",
+      panel.background = element_rect(fill = "#F3F3F3")) 
+           
+
+```
+
+## Plot 3
+
+An analysis into the underage stop and search calls was conducted to
+understand the top reasons why teenagers are investigated.
+
+```{r q3 p3}
+
+q3 <- data %>% 
+  filter(age_range =="10-17") %>% 
+  group_by(object_of_search) %>% 
+  summarise(count = n()) %>% 
+  slice_max(count, n = 5) 
+  
+q3_c = c("#2364AA", "#3DA5D9", "#73BFB8", "#FEC601", "#EA7317")
+ggplot(q3, aes(x = fct_inorder(object_of_search), y = count, fill = object_of_search)) + 
+  geom_col(width = 0.75) +
+  scale_fill_manual(values = q3_c) +
+  scale_x_discrete(guide = guide_axis(n.dodge=3)) +
+  labs(title = "<b>Suspected possession of drugs is the leading reason for search amongst teenagers</b><br>
+      <span style = 'font-size:12pt'>Bar graph showing the <b>top 5</b> of stop and search reasons</span>.</span>",
+      x = "Object of Search",
+      y = "Count",
+      caption = "Source: Search and Stop dataset available at https://data.police.uk/data/", 
+      legend = "Object of Search") +
+      theme( 
+      panel.background = element_rect(fill = "#F3F3F3"),
+      plot.title.position = "plot",
+      plot.title = element_textbox_simple(size=14),
+      axis.title = element_text(angle = 0, vjust = 0.5,size=10),
+      axis.text = element_text( angle = 0, vjust = 0.5,size=8),
+      legend.position = "right",
+      legend.title = element_text( angle = 0, vjust = 0.5,size=8)) 
+
+
+
+```
+
+# Extra Credit for Q2
+## I did not intend on making this - but it happened naturally...
+
+The following visualisation was created while I was trying to create a
+ggmap of the UK.
+
+```{r latlong}
+#For extra credit - this graph is also really bad
+
+ggplot(data, aes(x=longitude, y=latitude)) +
+  geom_polygon(fill = "white", colour = "grey50") +
+  coord_quickmap() + 
+  labs(title = "Art")
+
+```
