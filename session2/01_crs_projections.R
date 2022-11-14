@@ -8,7 +8,10 @@ library(patchwork)
 # we will use the rnatural earth package to get a medium resolution 
 # vector map of world countries excluding Antarctica
 world <- ne_countries(scale = "medium", returnclass = "sf") %>%
-  filter(name != "Antarctica") 
+  filter(name == "South Africa") 
+
+ggplot(data = world) +
+  geom_sf() 
 
 st_geometry(world) # what is the geometry?
 # CRS:            +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0
@@ -67,7 +70,7 @@ map_lat_lon <- base_map +
   coord_sf(crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_def") +
   labs(title = "Longitude-latitude",
        subtitle = 'crs = "+proj=longlat +ellps=WGS84"')
-
+map_lat_lon
 # Robinson
 map_robinson <- base_map +
   coord_sf(crs = "+proj=robin") +

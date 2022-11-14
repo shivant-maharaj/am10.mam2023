@@ -1,0 +1,278 @@
+---
+title: "individual_ass2"
+author: "Shivant Maharaj"
+date: "2022-11-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(vroom)
+library(skimr)
+library(sf)
+library(ggplot2)
+library(ggmap)
+library(ggrepel)
+library(gridExtra)
+library(pander)
+library(leaflet)
+library(tmap)
+library(tmaptools)
+library(hrbrthemes)
+library(mapview)
+library(viridis)
+
+```
+
+## R Markdown
+
+```{r}
+print(here::here())
+```
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r combining_data}
+
+# read many CSV files
+# Adapted from https://www.gerkelab.com/blog/2018/09/import-directory-csv-purrr-readr/
+
+# assuming all your files are within a directory called 'data/stop-search'
+data_dir <- "/Users/shivantmaharaj/Documents/London Business School/AM01/am10/session2/data/"
+
+
+files <- fs::dir_ls(path = data_dir, regexp = "\\.csv$", recurse = TRUE) 
+#recurse=TRUE will recursively look for files further down into any folders
+
+#files
+
+#read them all in using vroom::vroom()
+stop_search_data <- vroom(files, id = "source")
+
+# Uncomment the following lines if you want to see how much faster vroom is
+
+# library(microbenchmark)
+# mbm = microbenchmark(
+#   readr =  map_dfr(files, read_csv, .id = "source"),
+#   vroom =  vroom(files, id = "source"),
+#   times=10
+# )
+# mbm
+
+# Unit: milliseconds
+# expr       min        lq      mean    median        uq       max neval cld
+# readr 3676.9319 3761.8027 3944.5699 3791.1760 4055.4460 4626.9870    10   b
+# vroom  855.9414  864.9085  910.1052  905.8456  948.0134  975.8617    10  a 
+
+# Unit: milliseconds
+# expr       min        lq      mean   median        uq       max neval
+# readr 2409.1909 2415.7112 2515.6560 2468.405 2594.4041 2755.4614    10
+# vroom  252.7282  271.6477  278.1647  274.837  285.4859  311.3554    10
+
+#read them all in using vroom::vroom()
+stop_search_data <- vroom(files, id = "source")
+
+# Use janitor to clean names, and add more variables
+stop_search_all <- stop_search_data %>%
+  janitor::clean_names() %>% 
+  mutate(month = month(date),
+         month_name = month(date, label=TRUE, abbr = TRUE),
+         year= year(date),
+         month_year = paste0(year, "-",month_name)
+  ) %>% 
+
+# rename longitude/latitude to lng/lat
+rename(lng = longitude,
+       lat = latitude)
+
+#vroom_write(stop_search_all, "stop_search_all.csv")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r analytics, echo=FALSE}
+
+# skimr::skim() to inspect and get a feel for the data         
+skim(stop_search_all)
+
+# some quick counts...
+stop_search_all %>% 
+  count(gender, sort=TRUE)
+
+stop_search_all %>% 
+  count(object_of_search, sort=TRUE)
+
+stop_search_all %>% 
+  count(officer_defined_ethnicity, sort=TRUE)
+
+stop_search_all %>% 
+  count(age_range)
+
+```
+
+
+```{r analytics_2}
+
+
+# concentrate in top  searches, age_ranges, and officer defined ethnicities
+which_searches <- c("Controlled drugs", "Offensive weapons","Stolen goods" )
+which_ages <- c("10-17", "18-24","25-34", "over 34")
+which_ethnicity <- c("White", "Black", "Asian")
+
+stop_search_offence <- stop_search_all %>% 
+  
+  # filter out those stop-and-search where no further action was taken
+  filter(outcome != "A no further action disposal") %>% 
+  
+  #filter out those rows with no latitude/longitude
+  drop_na(lng,lat) %>% 
+  
+  # concentrate in top searches, age_ranges, and officer defined ethnicities
+  filter(object_of_search %in% which_searches) %>% 
+  filter(age_range %in% which_ages) %>% 
+  filter(officer_defined_ethnicity %in% which_ethnicity) %>% 
+  
+  # relevel factors so everything appears in correct order
+  mutate(
+    object_of_search = fct_relevel(object_of_search, 
+                                   c("Controlled drugs", "Offensive weapons","Stolen goods")), 
+    age_range = fct_relevel(age_range, 
+                            c("10-17", "18-24", "25-34", "over 34")), 
+    officer_defined_ethnicity = fct_relevel(officer_defined_ethnicity, 
+                                            c("White", "Black", "Asian")),
+    source = str_replace(source, "/Users/shivantmaharaj/Documents/London Business School/AM01/am10/session2/data/", "")
+  )
+
+#skim(stop_search_offence)
+
+#vroom_write(stop_search_offence, "stop_search_offence.csv")
+
+
+```
+
+```{r shape_file}
+
+# make it a shape file using WGS84 lng/lat coordinates
+stop_search_offence_sf <-  st_as_sf(stop_search_offence, 
+                              coords=c('lng', 'lat'), 
+                              crs = 4326)
+
+head(stop_search_offence_sf)
+
+
+st_geometry(stop_search_offence_sf) # what is the geometry ?
+# stop_search_offence_sf = geographic CRS: WGS 84
+
+# make sure you have the same direcory stucture to get London wards shapefile
+london_wards_sf <- read_sf("/Users/shivantmaharaj/Documents/London Business School/AM01/am10/data/London-wards-2018_ESRI/London_Ward.shp")
+
+st_geometry(london_wards_sf) # what is the geometry ?
+# london_wards_sf = projected CRS:  OSGB 1936 / British National Grid
+
+# change the CRS to use WGS84 lng/lat pairs
+london_wgs84 <-  london_wards_sf %>% 
+  st_transform(4326) # transform CRS to WGS84, latitude/longitude
+
+st_geometry(london_wgs84) # what is the geometry?
+
+#london_wgs84$geometry
+
+
+```
+
+
+# Shape
+
+```{r testing map 1}
+
+# Count how many S&S happened inside each ward
+london_wgs84 <- london_wgs84 %>%
+  mutate(Cases = lengths(
+    st_contains(london_wgs84, 
+                stop_search_offence_sf))) 
+
+#head(london_wgs84, 100)
+
+ggplot(data = london_wgs84, aes(fill = Cases)) +
+   geom_sf() +
+   scale_fill_gradient(low = "#ffffff", high = "#930000")+
+  labs(title = "City of Westminster has the most cases of Stop and Searches",
+    x = "Latitude", 
+    y = "Longitude", 
+    subtitle = "Map showing the number of stop and search cases per ward in the greater London area between 2019 to 2022",
+    caption = "Source: UK Metropolitan Police (2022)") + theme(panel.background = element_rect(fill = "gray95"))
+
+```
+
+# Map 2 Interactive
+
+```{r interactive}
+#Plot 2 - Making an interacrtive map that uses a 
+london_wgs84  %>%
+  mapview::mapview(zcol = "Cases", 
+                   at = seq(0, round(max(london_wgs84$count, na.rm = TRUE)/100)*100 + 100, 200), 
+                   #The code would leave 2500+ as a null because it did not match the bucketing 
+                   #I added a bespoke bucketing function
+                   legend = TRUE,
+                   col.regions = plasma(n = 14),
+                   layer.name = "Stop and Search cases per ward")
+
+```
+
+# Map 3 - Bar graph with gradient colour
+
+```{r map3}
+
+
+
+stop_search_offence <- stop_search_offence %>% mutate(count = n(), date_floor = floor_date(as.Date(date), unit = "month"))
+
+data_m3 <- stop_search_offence %>% group_by(date_floor) %>%  summarise(checks_per_month = n())
+
+#head(data_m3, 100)
+
+head(stop_search_offence,1000)
+
+
+#head(stop_search_offence, 100)
+```
+
+
+
+
+# GGPlot - Not working
+```{r plot}
+
+ggplot() +
+  # draw polygons from London wards shapefile
+  geom_sf(london_wgs84, fill = "#3B454A", size = 0.125, colour = "#b2b2b277") +
+  
+  # add points from stop-and-search shapefile
+  geom_sf(
+    data = stop_search_offence_sf, aes(fill = object_of_search), 
+    color = "white", size = 1.5, alpha = 0.7, shape = 21,
+    show.legend = FALSE
+  ) + 
+  theme_minimal()+
+  coord_sf(datum = NA) + #remove coordinates
+  #facet_wrap(~object_of_search) +
+  labs(title = "Locations of Stop&Search in London Sep 2021") +
+  hrbrthemes::theme_ft_rc(grid="", strip_text_face = "bold") +
+  theme(axis.text = element_blank()) +
+  theme(strip.text = element_text(color = "white"))+
+  NULL
+
+
+```
+
+

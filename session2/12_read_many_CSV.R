@@ -4,12 +4,25 @@ library(janitor)
 library(vroom)
 library(skimr)
 library(sf)
+library(ggplot2)
+library(ggmap)
+library(ggrepel)
+library(gridExtra)
+library(pander)
+library(leaflet)
+library(tmap)
+library(tmaptools)
+library(hrbrthemes)
+library(mapview)
+library(viridis)
+
 
 # read many CSV files
 # Adapted from https://www.gerkelab.com/blog/2018/09/import-directory-csv-purrr-readr/
 
+print(here())
 # assuming all your files are within a directory called 'data/stop-search'
-data_dir <- "data/stop-search"
+data_dir <- "session2/data/"
 
 files <- fs::dir_ls(path = data_dir, regexp = "\\.csv$", recurse = TRUE) 
 #recurse=TRUE will recursively look for files further down into any folders
@@ -33,6 +46,11 @@ stop_search_data <- vroom(files, id = "source")
 # expr       min        lq      mean    median        uq       max neval cld
 # readr 3676.9319 3761.8027 3944.5699 3791.1760 4055.4460 4626.9870    10   b
 # vroom  855.9414  864.9085  910.1052  905.8456  948.0134  975.8617    10  a 
+
+# Unit: milliseconds
+# expr       min        lq      mean   median        uq       max neval
+# readr 2409.1909 2415.7112 2515.6560 2468.405 2594.4041 2755.4614    10
+# vroom  252.7282  271.6477  278.1647  274.837  285.4859  311.3554    10
 
 #read them all in using vroom::vroom()
 stop_search_data <- vroom(files, id = "source")
@@ -117,4 +135,27 @@ st_geometry(london_wards_sf) # what is the geometry ?
 london_wgs84 <-  london_wards_sf %>% 
   st_transform(4326) # transform CRS to WGS84, latitude/longitude
 
-st_geometry(london_wgs84) # what is the geometry ?
+st_geometry(london_wgs84) # what is the geometry?
+
+head(stop_search_all)
+
+ggplot() +
+  # draw polygons from London wards shapefile
+  geom_sf(data = london_wgs84, fill = "#3B454A", size = 0.125, colour = "#b2b2b277") +
+  
+  # add points from stop-and-search shapefile
+  geom_sf(
+    data = stop_search_all, aes(fill = object_of_search), 
+    color = "white", size = 1.5, alpha = 0.7, shape = 21,
+    show.legend = FALSE
+  ) + 
+  theme_minimal()+
+  coord_sf(datum = NA) + #remove coordinates
+  facet_wrap(~object_of_search) +
+  labs(title = "Locations of Stop&Search in London Sep 2021") +
+  hrbrthemes::theme_ft_rc(grid="", strip_text_face = "bold") +
+  theme(axis.text = element_blank()) +
+  theme(strip.text = element_text(color = "white"))+
+  NULL
+
+

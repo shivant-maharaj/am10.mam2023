@@ -15,8 +15,7 @@ library(mapview)
 library(viridis)
 
 #use sf::read_sf() to read in London Wards shapefile
-london_wards_sf <- read_sf(here("data/London-wards-2018_ESRI/London_Ward.shp"))
-
+london_wards_sf <- read_sf("/Users/shivantmaharaj/Documents/London Business School/AM01/am10/data/London-wards-2018_ESRI")
 glimpse(london_wards_sf)
 
 # what type of geometry does our shapefile have?
@@ -30,7 +29,7 @@ london_wgs84 <-  london_wards_sf %>%
 london_wgs84$geometry
 
 
-sep21 <- read_csv(here("data/stop-search/2021-09-metropolitan-stop-and-search.csv")) %>% 
+sep21 <- read_csv("/Users/shivantmaharaj/Documents/London Business School/AM01/am10/data/stop-search/stop-and-search.csv") %>% 
   clean_names() %>% 
   
   # rename longitude/latitude to lng/lat, as this is how they are used in leaflet
@@ -153,7 +152,8 @@ tmap::tm_shape(london_wgs84) +
 # use mapview and viridis "inferno" colour scale
 london_wgs84  %>%
   mapview::mapview(zcol = "count", 
-                   at = seq(0, max(london_wgs84$count, na.rm = TRUE), 5), 
+                   at = seq(0, max(london_wgs84$count, na.rm = TRUE), 250), 
                    legend = TRUE,
-                   col.regions = inferno(n = 14),
+                   col.regions = plasma(n = 10),
                    layer.name = "Cases per ward")
+
