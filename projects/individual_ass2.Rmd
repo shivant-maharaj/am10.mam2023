@@ -103,7 +103,7 @@ You can also embed plots, for example:
 ```{r analytics, echo=FALSE}
 
 # skimr::skim() to inspect and get a feel for the data         
-skim(stop_search_all)
+#skim(stop_search_all)
 
 # some quick counts...
 stop_search_all %>% 
@@ -220,7 +220,7 @@ ggplot(data = london_wgs84, aes(fill = Cases)) +
 #Plot 2 - Making an interacrtive map that uses a 
 london_wgs84  %>%
   mapview::mapview(zcol = "Cases", 
-                   at = seq(0, round(max(london_wgs84$count, na.rm = TRUE)/100)*100 + 100, 200), 
+                   at = seq(0, round(max(london_wgs84$Cases, na.rm = TRUE)/100)*100 + 100, 200), 
                    #The code would leave 2500+ as a null because it did not match the bucketing 
                    #I added a bespoke bucketing function
                    legend = TRUE,
@@ -235,18 +235,62 @@ london_wgs84  %>%
 
 
 
-stop_search_offence <- stop_search_offence %>% mutate(count = n(), date_floor = floor_date(as.Date(date), unit = "month"))
+stop_search_offence <- stop_search_offence %>% 
+  mutate(count = n(), date_floor = floor_date(as.Date(date), unit = "month"))
 
-data_m3 <- stop_search_offence %>% group_by(date_floor) %>%  summarise(checks_per_month = n())
+data_m3 <- stop_search_offence %>% 
+  group_by(date_floor, type) %>%  
+  summarise(checks_per_month = n()) 
+  #ungroup()
 
-#head(data_m3, 100)
+gender_m3 <- stop_search_offence %>% 
+  group_by(date_floor, gender) %>%  
+  summarise(checks_per_month = n()) %>% 
+  filter(gender == "Male" | gender == "Female")
+  #drop_na(gender)
 
-head(stop_search_offence,1000)
+head(gender_m3, 100)
+
+search_colours <- c("#23f0c7","#ef767a","#7d7abc")
+
+ggplot(data_m3, aes(x = date_floor, y = checks_per_month, colour = type)) + 
+  geom_line() +
+  facet_wrap(~type, nrow=1) +
+  scale_colour_manual(values=search_colours)
+
+#head(stop_search_offence,1000)
 
 
 #head(stop_search_offence, 100)
 ```
 
+```{r animated}
+
+library(gapminder)
+library(gganimate)
+library(png)
+library(gifski)
+
+#skimr::skim(gapminder)
+
+# Use the gapminder dataset in ggplot
+ggplot(data=data_m3,
+       aes(x=date_floor, y=checks_per_month, size=checks_per_month, color=type)) +
+  # Add a point geom
+ geom_line() +
+ geom_point(alpha=0.7, show.legend=FALSE) +
+# Add some manual scaling and facets 
+ scale_colour_manual(values=search_colours) +
+ scale_size(range=c(2, 12)) +
+ #scale_x_log10() +
+ facet_wrap(~type, nrow=1) + 
+# Animate figure with gganimate package
+ transition_time(date_floor) +
+ ease_aes('linear') +
+ labs(title='Year: {frame_time}', 
+      x='Date', 
+      y='Cases')
+```
 
 
 
