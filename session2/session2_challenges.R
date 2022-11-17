@@ -4,7 +4,7 @@ library(here)
 library(extrafont)
 library(ggtext)
 
-loadfonts(device="win")
+#loadfonts(device="osx")
 
 # you must try to recreate
 # 1. session2_challenge.png (a static image where you have to use a shapefile and country results)
@@ -20,10 +20,12 @@ my_scale <- c('#00429d', '#4771b2', '#73a2c6', '#a5d5d8', '#ffffe0', '#ffbcaf', 
 party_colours <- c("#2E74C0", "#CB454A")
 
 # Use the urbnmapr package to get shapefile for all US counties
-# remotes::install_github("UrbanInstitute/urbnmapr")
+#remotes::install_github("UrbanInstitute/urbnmapr")
 library(urbnmapr)
 
-counties_sf <- get_urbn_map("counties", sf = TRUE)
+counties_sf <- get_urbn_map("counties", sf = TRUE) %>% 
+  mutate(fips = county_fips) %>% 
+  select(-county_fips)
 
 class(counties_sf)
 counties_sf$geometry
@@ -33,9 +35,24 @@ counties_sf$geometry
 
 counties_sf %>% 
   ggplot(aes()) +
-  geom_sf(fill = "grey70", colour = "#ffffff")
+  geom_sf(fill = "grey", colour = "#ffffff") 
+
+
+glimpse(counties_sf)
 
 # get latest NYT county-level data for the US 2020 election from this GitHub repository.
 # https://github.com/favstats/USElection2020-NYT-Results/tree/master/data/2020-11-10%2014-35-07
 
 results_president <- vroom::vroom(here("data", "results_president.csv"))
+
+glimpse(results_president)
+
+full <- left_join(counties_sf, results_president)
+
+glimpse(full)
+
+
+full %>% 
+  ggplot(aes()) +
+  geom_sf(fill = margin2020, colour = "#ffffff") +
+  scale_fill_gradientn(my_scale)
